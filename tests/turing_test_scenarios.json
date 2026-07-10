@@ -1,0 +1,193 @@
+{
+  "test_scenarios": [
+    {
+      "id": 1,
+      "name": "日常日志分析",
+      "category": "basic",
+      "user_input": "今天的RPA跑得怎么样？",
+      "expected_behavior": "自然语言回复，包含统计数据",
+      "evaluation_points": {
+        "natural_language": 5,
+        "business_understanding": 5,
+        "context_memory": 0,
+        "error_tolerance": 0,
+        "emotional_intelligence": 2
+      }
+    },
+    {
+      "id": 2,
+      "name": "故障原因分析",
+      "category": "diagnosis",
+      "user_input": "为什么会有任务失败？",
+      "expected_behavior": "分析失败原因，给出可能的解决方案",
+      "evaluation_points": {
+        "natural_language": 5,
+        "business_understanding": 5,
+        "context_memory": 3,
+        "error_tolerance": 0,
+        "emotional_intelligence": 3
+      }
+    },
+    {
+      "id": 3,
+      "name": "配置修改",
+      "category": "operation",
+      "user_input": "帮我把企业微信webhook改成 https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test123",
+      "expected_behavior": "理解指令，执行配置更新，确认结果",
+      "evaluation_points": {
+        "natural_language": 4,
+        "business_understanding": 5,
+        "context_memory": 0,
+        "error_tolerance": 0,
+        "emotional_intelligence": 3
+      }
+    },
+    {
+      "id": 4,
+      "name": "时间范围查询",
+      "category": "query",
+      "user_input": "看看昨天下午的运行情况",
+      "expected_behavior": "正确理解时间范围，拉取数据并分析",
+      "evaluation_points": {
+        "natural_language": 5,
+        "business_understanding": 5,
+        "context_memory": 0,
+        "error_tolerance": 2,
+        "emotional_intelligence": 2
+      }
+    },
+    {
+      "id": 5,
+      "name": "多轮对话-上下文记忆",
+      "category": "context",
+      "conversation": [
+        {
+          "turn": 1,
+          "user": "分析今天的日志",
+          "expected": "执行分析，给出结果"
+        },
+        {
+          "turn": 2,
+          "user": "那两个失败的能重跑吗？",
+          "expected": "记住前面提到的失败任务，给出建议"
+        },
+        {
+          "turn": 3,
+          "user": "算了，让领导看看再说",
+          "expected": "理解用户的决定，主动询问是否需要生成报告"
+        }
+      ],
+      "evaluation_points": {
+        "natural_language": 5,
+        "business_understanding": 4,
+        "context_memory": 5,
+        "error_tolerance": 0,
+        "emotional_intelligence": 4
+      }
+    },
+    {
+      "id": 6,
+      "name": "模糊指令理解",
+      "category": "error_tolerance",
+      "user_input": "帮我查下今天有没有问题",
+      "expected_behavior": "理解模糊指令，分析今天的日志并报告异常",
+      "evaluation_points": {
+        "natural_language": 4,
+        "business_understanding": 5,
+        "context_memory": 0,
+        "error_tolerance": 4,
+        "emotional_intelligence": 2
+      }
+    },
+    {
+      "id": 7,
+      "name": "错别字容忍",
+      "category": "error_tolerance",
+      "user_input": "今天rpA跑的咋样",
+      "expected_behavior": "容忍错别字和口语化表达，正常理解并回复",
+      "evaluation_points": {
+        "natural_language": 5,
+        "business_understanding": 3,
+        "context_memory": 0,
+        "error_tolerance": 5,
+        "emotional_intelligence": 2
+      }
+    },
+    {
+      "id": 8,
+      "name": "紧急故障处理",
+      "category": "emergency",
+      "user_input": "不好了！所有任务都挂了！",
+      "expected_behavior": "识别紧急情况，快速分析原因，给出处理建议",
+      "evaluation_points": {
+        "natural_language": 4,
+        "business_understanding": 5,
+        "context_memory": 0,
+        "error_tolerance": 0,
+        "emotional_intelligence": 5
+      }
+    },
+    {
+      "id": 9,
+      "name": "数据库查询",
+      "category": "database",
+      "user_input": "从数据库查一下今天的记录，数据库地址192.168.1.100，端口3306，数据库名rpa_db，用户root，密码123456",
+      "expected_behavior": "理解数据库配置，执行查询，分析结果",
+      "evaluation_points": {
+        "natural_language": 3,
+        "business_understanding": 5,
+        "context_memory": 0,
+        "error_tolerance": 0,
+        "emotional_intelligence": 2
+      }
+    },
+    {
+      "id": 10,
+      "name": "模板保存与使用",
+      "category": "template",
+      "conversation": [
+        {
+          "turn": 1,
+          "user": "这次分析结果不错，保存成模板吧，叫'生产环境日报'",
+          "expected": "保存模板，确认成功"
+        },
+        {
+          "turn": 2,
+          "user": "用生产环境日报模板分析一下",
+          "expected": "加载模板，执行分析"
+        }
+      ],
+      "evaluation_points": {
+        "natural_language": 4,
+        "business_understanding": 5,
+        "context_memory": 4,
+        "error_tolerance": 0,
+        "emotional_intelligence": 3
+      }
+    }
+  ],
+  "evaluation_criteria": {
+    "natural_language": {
+      "max_score": 25,
+      "description": "语言自然度：是否口语化、不生硬、有人类语气"
+    },
+    "business_understanding": {
+      "max_score": 25,
+      "description": "业务理解：是否理解RPA业务逻辑、能准确提取信息、给出合理建议"
+    },
+    "context_memory": {
+      "max_score": 20,
+      "description": "上下文记忆：多轮对话能否记住前文、指代消解、话题切换"
+    },
+    "error_tolerance": {
+      "max_score": 15,
+      "description": "容错能力：错别字、模糊指令、异常情况的处理"
+    },
+    "emotional_intelligence": {
+      "max_score": 15,
+      "description": "情商：礼貌、耐心、主动确认、理解情绪"
+    }
+  },
+  "passing_score": 70,
+  "turing_test_threshold": 0.3
+}
