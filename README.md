@@ -68,35 +68,33 @@
 
 ## 📖 开发者版（源码）
 
-### 环境准备
+### 快速启动
 
-**Python 3.8+** + **Node.js 16+**
-
-### 安装依赖
+**5步启动：** 查看 [快速启动指南](QUICKSTART.md)
 
 ```bash
-# 后端依赖
+# 1. 克隆项目
+git clone https://github.com/LanKevin-admin/agent.git
+cd agent
+
+# 2. 配置环境
+copy .env.example .env
+# 编辑.env填写DeepSeek API Key
+
+# 3. 安装Python依赖
 pip install -r requirements.txt
 
-# 前端依赖
+# 4. 构建前端
 cd web
 npm install
-```
+npm run build
+cd ..
 
-### 启动开发服务器
-
-**后端：**
-```bash
+# 5. 启动服务
 python web_server.py
 ```
-访问：http://127.0.0.1:8888
 
-**前端：**
-```bash
-cd web
-npm run dev
-```
-访问：http://localhost:5173
+访问：http://127.0.0.1:8888
 
 ### 打包EXE
 
