@@ -2,6 +2,7 @@
 基于Skills架构的RPA Agent - 参考OpenClaw设计
 """
 import os
+import json
 import logging
 from typing import List, Dict, Any
 from datetime import datetime
@@ -128,8 +129,8 @@ class SkillBasedAgent:
             
             for tool_call in message.tool_calls:
                 tool_name = tool_call.function.name
-                arguments = eval(tool_call.function.arguments)
-                
+                arguments = json.loads(tool_call.function.arguments)
+
                 logger.info(f"[Agent] 调用工具: {tool_name}({arguments})")
                 
                 # 通过Skill管理器执行工具
