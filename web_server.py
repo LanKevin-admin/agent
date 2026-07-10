@@ -22,6 +22,9 @@ from database.models import init_db, get_db
 from database import operations as db_ops
 from scheduler.task_scheduler import init_scheduler, task_scheduler
 from feishu.message_monitor_task import start_message_monitor
+from feishu.event_handler import event_handler
+from feishu.message_monitor import message_monitor
+from feishu.client import feishu_client
 
 logger = logging.getLogger(__name__)
 
@@ -51,12 +54,22 @@ agent = SkillBasedAgent()
 scheduler = init_scheduler(agent)
 logger.info("[WebServer] 定时任务调度器已启动")
 
-# 启动飞书消息监听（10秒检查一次）
-try:
-    start_message_monitor(agent, interval=10)
-    logger.info("[WebServer] 飞书消息监听已启动，每10秒检查一次@消息")
-except Exception as e:
-    logger.warning(f"[WebServer] 飞书消息监听启动失败: {e}")
+# 飞书消息监听任务（延迟到应用启动时初始化）
+@app.on_event("startup")
+async def startup_event():
+    """应用启动事件"""
+    # 启动飞书消息监听（10秒检查一次）
+    try:
+        # 检查飞书配置是否完整
+        if not config.feishu.APP_ID or not config.feishu.APP_SECRET:
+            logger.warning("[WebServer] 飞书配置不完整，消息监听功能未启动（缺少APP_ID或APP_SECRET）")
+        elif not config.feishu.TARGET_CHAT_ID:
+            logger.warning("[WebServer] 飞书配置不完整，消息监听功能未启动（缺少TARGET_CHAT_ID）")
+        else:
+            start_message_monitor(agent, interval=10)
+            logger.info("[WebServer] ✅ 飞书消息监听已启动，每10秒检查一次@消息")
+    except Exception as e:
+        logger.error(f"[WebServer] ❌ 飞书消息监听启动失败: {e}", exc_info=True)
 
 
 # ==================== 数据模型 ====================
@@ -537,6 +550,92 @@ async def stop_monitor():
         return {"success": True, "message": "消息监听已停止"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/feishu/webhook")
+async def feishu_webhook(request: Dict[str, Any]):
+    """
+    飞书事件订阅Webhook接口（实时推送）
+    替代轮询模式，实现零延迟响应
+
+    配置方法：
+    1. 登录飞书开放平台：https://open.feishu.cn/app
+    2. 选择你的应用 → 事件订阅 → 请求地址配置
+    3. 填写: http://你的服务器IP:8888/api/feishu/webhook
+    4. 订阅事件：im.message.receive_v1（接收消息）
+    """
+    try:
+        # 1. URL验证（首次配置时飞书会发送验证请求）
+        if request.get("type") == "url_verification":
+            return event_handler.handle_url_verification(request)
+
+        # 2. 事件回调
+        event = request.get("event", {})
+        event_type = request.get("type", "")
+
+        logger.info(f"[Webhook] 收到飞书事件: {event_type}")
+
+        # 只处理消息接收事件
+        if event_type == "event_callback":
+            # 解析消息
+            parsed = event_handler.parse_message_event(event)
+            if not parsed:
+                return {"success": False, "error": "parse failed"}
+
+            message_id = parsed["message_id"]
+            content = parsed["content"]
+            sender_id = parsed["sender_id"]
+
+            # 获取机器人ID
+            if not message_monitor.bot_open_id:
+                message_monitor.get_bot_info()
+
+            # 跳过机器人自己发的消息
+            if sender_id == message_monitor.bot_open_id:
+                return {"success": True, "message": "skip bot message"}
+
+            # 检查是否@机器人
+            is_mention = event_handler.is_mention_bot(parsed, message_monitor.bot_open_id)
+
+            if is_mention:
+                logger.info(f"[Webhook] 检测到@消息: {content[:50]}...")
+
+                # 异步处理（避免阻塞Webhook响应）
+                import threading
+                def handle_async():
+                    try:
+                        # 清理@标记
+                        user_query = message_monitor.clean_mention_text(content)
+
+                        # 使用Agent处理
+                        ai_response = agent.run(user_query)
+
+                        # 回复
+                        if ai_response:
+                            # 限制长度
+                            if len(ai_response) > 4000:
+                                ai_response = ai_response[:4000] + "\n\n... (内容过长，已截断)"
+
+                            message_monitor.reply_message(message_id, ai_response)
+                            logger.info(f"[Webhook] 已回复消息: {message_id}")
+                    except Exception as e:
+                        logger.error(f"[Webhook] 处理消息失败: {e}", exc_info=True)
+                        try:
+                            message_monitor.reply_message(message_id, f"抱歉，处理消息时出错：{str(e)}")
+                        except:
+                            pass
+
+                threading.Thread(target=handle_async, daemon=True).start()
+
+                return {"success": True, "message": "processing"}
+            else:
+                return {"success": True, "message": "not mention bot"}
+
+        return {"success": True}
+
+    except Exception as e:
+        logger.error(f"[Webhook] 处理失败: {e}", exc_info=True)
+        return {"success": False, "error": str(e)}
 
 
 # 挂载前端静态文件（打包后会包含）

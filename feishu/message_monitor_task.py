@@ -31,11 +31,16 @@ class MessageMonitorTask:
         if self.running:
             logger.warning("[MessageMonitorTask] 监听任务已在运行")
             return
-        
-        self.running = True
-        self.thread = threading.Thread(target=self._run, daemon=True)
-        self.thread.start()
-        logger.info(f"[MessageMonitorTask] 消息监听任务已启动，间隔{self.interval}秒")
+
+        try:
+            self.running = True
+            self.thread = threading.Thread(target=self._run, daemon=True)
+            self.thread.start()
+            logger.info(f"[MessageMonitorTask] ✅ 消息监听任务已启动，间隔{self.interval}秒")
+        except Exception as e:
+            self.running = False
+            logger.error(f"[MessageMonitorTask] ❌ 启动监听任务失败: {e}", exc_info=True)
+            raise
     
     def stop(self):
         """停止监听任务"""
@@ -76,43 +81,51 @@ class MessageMonitorTask:
     def _handle_mention(self, mention: dict):
         """
         处理单条@消息
-        
+
         Args:
             mention: 消息信息
         """
         message_id = mention["message_id"]
         content = mention["content"]
         sender_id = mention["sender_id"]
-        
-        # 清理@标记
-        user_query = message_monitor.clean_mention_text(content)
-        
+        is_mention_bot = mention.get("is_mention_bot", False)
+
+        # 判断是新对话还是后续消息
+        if is_mention_bot:
+            # 直接@的消息，清理@标记
+            user_query = message_monitor.clean_mention_text(content)
+            conversation_type = "新对话"
+        else:
+            # 后续消息，不需要清理@标记
+            user_query = content.strip()
+            conversation_type = "后续消息"
+
         if not user_query:
             logger.warning(f"[MessageMonitorTask] 消息内容为空: {message_id}")
             return
-        
-        logger.info(f"[MessageMonitorTask] 处理用户消息: {user_query[:50]}...")
-        
+
+        logger.info(f"[MessageMonitorTask] 处理用户{conversation_type}: {user_query[:50]}...")
+
         try:
             # 使用Agent处理用户消息
             ai_response = self.agent.run(user_query)
-            
+
             # 回复消息
             if ai_response:
                 # 限制回复长度（飞书消息有长度限制）
                 max_length = 4000
                 if len(ai_response) > max_length:
                     ai_response = ai_response[:max_length] + "\n\n... (内容过长，已截断)"
-                
+
                 success = message_monitor.reply_message(message_id, ai_response)
-                
+
                 if success:
-                    logger.info(f"[MessageMonitorTask] 已回复消息: {message_id}")
+                    logger.info(f"[MessageMonitorTask] 已回复{conversation_type}: {message_id}")
                 else:
                     logger.error(f"[MessageMonitorTask] 回复消息失败: {message_id}")
             else:
                 logger.warning(f"[MessageMonitorTask] AI未返回回复内容")
-                
+
         except Exception as e:
             logger.error(f"[MessageMonitorTask] 处理消息失败: {e}", exc_info=True)
             # 回复错误提示
