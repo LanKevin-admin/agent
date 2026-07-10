@@ -10,8 +10,8 @@ def get_base_dir():
         # EXE运行：使用EXE所在目录
         return os.path.dirname(sys.executable)
     else:
-        # 开发环境：使用当前文件所在目录
-        return os.path.dirname(__file__)
+        # 开发环境：使用项目根目录（向上一级）
+        return os.path.dirname(os.path.dirname(__file__))
 
 
 # 加载环境变量，优先外部.env

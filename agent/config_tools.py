@@ -2,6 +2,7 @@
 AI配置助手 - 通过自然语言对话配置系统
 """
 import os
+import sys
 import re
 import json
 import logging
@@ -10,12 +11,22 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 
+def get_base_dir():
+    """获取基础目录，兼容开发环境和EXE打包"""
+    if getattr(sys, 'frozen', False):
+        # EXE运行：使用EXE所在目录
+        return os.path.dirname(sys.executable)
+    else:
+        # 开发环境：使用项目根目录
+        return os.path.dirname(os.path.dirname(__file__))
+
+
 def tool_update_config(
     config_updates: str
 ) -> Dict[str, Any]:
     """
     更新系统配置
-    
+
     Args:
         config_updates: JSON格式的配置更新，例如：
         {
@@ -23,20 +34,37 @@ def tool_update_config(
             "FEISHU_APP_SECRET": "xxx",
             "AI_API_KEY": "sk-xxx"
         }
-        
+
     Returns:
         {"success": true/false, "message": "更新结果"}
     """
     try:
         updates = json.loads(config_updates)
-        env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
-        
-        # 读取现有配置
+        env_path = os.path.join(get_base_dir(), '.env')
+
+        # 读取现有配置（如果不存在则从模板创建）
         if os.path.exists(env_path):
             with open(env_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
         else:
-            lines = []
+            # .env不存在，从.env.example创建
+            example_path = os.path.join(get_base_dir(), '.env.example')
+            if os.path.exists(example_path):
+                with open(example_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                logger.info("[ConfigAssistant] .env不存在，从.env.example创建")
+            else:
+                # 连example都没有，从打包内的加载
+                if getattr(sys, 'frozen', False):
+                    # EXE模式：从临时目录加载
+                    example_path = os.path.join(sys._MEIPASS, '.env.example')
+                    if os.path.exists(example_path):
+                        with open(example_path, 'r', encoding='utf-8') as f:
+                            lines = f.readlines()
+                    else:
+                        lines = []
+                else:
+                    lines = []
         
         # 更新配置
         updated_keys = set()
@@ -102,7 +130,7 @@ def tool_save_analysis_template(
 ) -> Dict[str, Any]:
     """
     保存分析模板（固定成功的分析流程）
-    
+
     Args:
         template_name: 模板名称，如 "生产环境日报"
         template_config: 模板配置JSON，包含：
@@ -115,13 +143,13 @@ def tool_save_analysis_template(
             "date_range_field": "query_range",  # 日期范围字段
             "description": "模板描述"
         }
-        
+
     Returns:
         {"success": true/false, "message": "保存结果"}
     """
     try:
         config = json.loads(template_config)
-        templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
+        templates_dir = os.path.join(get_base_dir(), 'templates')
         os.makedirs(templates_dir, exist_ok=True)
         
         template_file = os.path.join(templates_dir, f"{template_name}.json")
@@ -148,10 +176,10 @@ def tool_save_analysis_template(
 def tool_load_analysis_template(template_name: str) -> Dict[str, Any]:
     """
     加载已保存的分析模板
-    
+
     Args:
         template_name: 模板名称
-        
+
     Returns:
         {
             "success": true/false,
@@ -160,7 +188,7 @@ def tool_load_analysis_template(template_name: str) -> Dict[str, Any]:
         }
     """
     try:
-        templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
+        templates_dir = os.path.join(get_base_dir(), 'templates')
         template_file = os.path.join(templates_dir, f"{template_name}.json")
         
         if not os.path.exists(template_file):
@@ -191,7 +219,7 @@ def tool_load_analysis_template(template_name: str) -> Dict[str, Any]:
 def tool_list_templates() -> Dict[str, Any]:
     """
     列出所有已保存的模板
-    
+
     Returns:
         {
             "success": true,
@@ -202,7 +230,7 @@ def tool_list_templates() -> Dict[str, Any]:
         }
     """
     try:
-        templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
+        templates_dir = os.path.join(get_base_dir(), 'templates')
         
         if not os.path.exists(templates_dir):
             return {

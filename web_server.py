@@ -21,6 +21,7 @@ from agent.skill_based_agent import SkillBasedAgent
 from database.models import init_db, get_db
 from database import operations as db_ops
 from scheduler.task_scheduler import init_scheduler, task_scheduler
+from feishu.message_monitor_task import start_message_monitor
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,13 @@ agent = SkillBasedAgent()
 # 初始化定时任务调度器
 scheduler = init_scheduler(agent)
 logger.info("[WebServer] 定时任务调度器已启动")
+
+# 启动飞书消息监听（10秒检查一次）
+try:
+    start_message_monitor(agent, interval=10)
+    logger.info("[WebServer] 飞书消息监听已启动，每10秒检查一次@消息")
+except Exception as e:
+    logger.warning(f"[WebServer] 飞书消息监听启动失败: {e}")
 
 
 # ==================== 数据模型 ====================
@@ -194,10 +202,28 @@ async def update_config(req: ConfigUpdateRequest):
         else:
             # 开发模式：写入项目根目录
             env_file = os.path.join(os.path.dirname(__file__), ".env")
-        
-        # 读取现有配置
-        with open(env_file, "r", encoding="utf-8") as f:
-            lines = f.readlines()
+
+        # 读取现有配置（如果文件不存在则创建）
+        if os.path.exists(env_file):
+            with open(env_file, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        else:
+            # 文件不存在，使用模板
+            if getattr(sys, 'frozen', False):
+                # EXE模式：先找EXE同目录，再找打包内
+                template_file = os.path.join(os.path.dirname(sys.executable), ".env.example")
+                if not os.path.exists(template_file) and hasattr(sys, '_MEIPASS'):
+                    template_file = os.path.join(sys._MEIPASS, ".env.example")
+            else:
+                # 开发模式
+                template_file = os.path.join(os.path.dirname(__file__), ".env.example")
+
+            if os.path.exists(template_file):
+                with open(template_file, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+            else:
+                # 连模板都没有，创建空配置
+                lines = []
         
         # 更新配置项
         updates = {
@@ -468,6 +494,47 @@ async def get_task_executions(task_id: int, limit: int = 50, db: Session = Depen
             "success": True,
             "executions": [exec.to_dict() for exec in executions]
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/monitor/status")
+async def get_monitor_status():
+    """获取消息监听状态"""
+    from feishu.message_monitor_task import monitor_task
+
+    if monitor_task:
+        return {
+            "success": True,
+            "running": monitor_task.running,
+            "interval": monitor_task.interval,
+            "bot_id": monitor_task.agent is not None
+        }
+    else:
+        return {
+            "success": True,
+            "running": False,
+            "interval": 0
+        }
+
+
+@app.post("/api/monitor/start")
+async def start_monitor():
+    """启动消息监听"""
+    try:
+        start_message_monitor(agent, interval=10)
+        return {"success": True, "message": "消息监听已启动"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/monitor/stop")
+async def stop_monitor():
+    """停止消息监听"""
+    try:
+        from feishu.message_monitor_task import stop_message_monitor
+        stop_message_monitor()
+        return {"success": True, "message": "消息监听已停止"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -55,10 +55,17 @@ def tool_create_scheduled_task(
 
         # 同步到调度器
         try:
-            from scheduler.task_scheduler import task_scheduler
-            if task_scheduler:
-                task_scheduler.add_task(task)
-                logger.info(f"[ScheduledTask] 任务已添加到调度器: {task_name}")
+            # 从web_server获取全局调度器实例
+            import sys
+            if 'scheduler.task_scheduler' in sys.modules:
+                scheduler_module = sys.modules['scheduler.task_scheduler']
+                if hasattr(scheduler_module, 'task_scheduler') and scheduler_module.task_scheduler:
+                    scheduler_module.task_scheduler.add_task(task)
+                    logger.info(f"[ScheduledTask] 任务已添加到调度器: {task_name}")
+                else:
+                    logger.warning(f"[ScheduledTask] 调度器未初始化，任务将在下次启动时加载")
+            else:
+                logger.warning(f"[ScheduledTask] 调度器模块未导入")
         except Exception as e:
             logger.warning(f"[ScheduledTask] 添加到调度器失败: {e}")
 
