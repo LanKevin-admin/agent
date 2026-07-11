@@ -63,3 +63,5 @@ export const deleteTask = (taskId) => api.delete(`/tasks/${taskId}`)
 // 获取任务执行历史
 export const getTaskExecutions = (taskId, limit = 50) => api.get(`/tasks/${taskId}/executions`, { params: { limit } })
 
+export default api
+

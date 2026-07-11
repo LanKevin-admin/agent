@@ -638,6 +638,67 @@ async def feishu_webhook(request: Dict[str, Any]):
         return {"success": False, "error": str(e)}
 
 
+class ChatRequest(BaseModel):
+    """对话请求"""
+    message: str
+    mode: Optional[str] = "text"  # text | voice
+
+
+@app.post("/api/chat")
+async def chat_with_ai(req: ChatRequest):
+    """
+    AI对话接口（支持语音模式）
+
+    语音模式特点：
+    - AI会更口语化
+    - 如果不理解会主动提问
+    - 需要确认时会明确询问
+    """
+    try:
+        user_message = req.message
+        is_voice_mode = req.mode == "voice"
+
+        # 语音模式：添加特殊提示
+        if is_voice_mode:
+            system_hint = """
+            【语音对话模式】
+            - 用户通过语音输入，回复要简洁口语化
+            - 如果不理解用户意图，主动询问："你是想XXX吗？"
+            - 需要执行操作时，先确认："我理解你想XXX，对吗？"
+            - 确认后再执行，执行完告知结果
+            """
+            full_message = f"{system_hint}\n\n用户说：{user_message}"
+        else:
+            full_message = user_message
+
+        # 使用Agent处理
+        ai_response = agent.run(full_message)
+
+        # 保存对话到数据库（可选）
+        # db_ops.save_conversation(user_message, ai_response)
+
+        return {
+            "success": True,
+            "response": ai_response,
+            "mode": req.mode
+        }
+
+    except Exception as e:
+        logger.error(f"[Chat] 对话失败: {e}", exc_info=True)
+
+        # 语音模式的错误提示更友好
+        if req.mode == "voice":
+            error_msg = "抱歉，我没听懂，能再说一遍吗？"
+        else:
+            error_msg = f"处理失败：{str(e)}"
+
+        return {
+            "success": False,
+            "response": error_msg,
+            "error": str(e)
+        }
+
+
 # 挂载前端静态文件（打包后会包含）
 web_dist_dir = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.exists(web_dist_dir):

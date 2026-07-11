@@ -9,14 +9,18 @@ import Config from './views/Config.vue'
 import Analysis from './views/Analysis.vue'
 import Reports from './views/Reports.vue'
 import Chat from './views/Chat.vue'
+import VoiceChat from './views/VoiceChat.vue'
 import Templates from './views/Templates.vue'
 import Tasks from './views/Tasks.vue'
+import RPA from './views/RPA.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
     { path: '/', component: Dashboard, meta: { title: '仪表盘' } },
     { path: '/chat', component: Chat, meta: { title: '智能对话' } },
+    { path: '/voice', component: VoiceChat, meta: { title: '语音助手' } },
+    { path: '/rpa', component: RPA, meta: { title: 'RPA自动化' } },
     { path: '/templates', component: Templates, meta: { title: '分析模板' } },
     { path: '/tasks', component: Tasks, meta: { title: '定时任务' } },
     { path: '/analysis', component: Analysis, meta: { title: '日志分析' } },

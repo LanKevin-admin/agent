@@ -21,6 +21,14 @@
           <el-icon><ChatDotRound /></el-icon>
           <span>智能对话</span>
         </el-menu-item>
+        <el-menu-item index="/voice">
+          <el-icon><Microphone /></el-icon>
+          <span>语音助手</span>
+        </el-menu-item>
+        <el-menu-item index="/rpa">
+          <el-icon><VideoPlay /></el-icon>
+          <span>RPA自动化</span>
+        </el-menu-item>
         <el-menu-item index="/templates">
           <el-icon><Files /></el-icon>
           <span>分析模板</span>

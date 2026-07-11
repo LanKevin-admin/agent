@@ -1,0 +1,67 @@
+{
+  "template_id": "baidu_search",
+  "name": "百度搜索测试",
+  "type": "browser",
+  "description": "简单的百度搜索示例，用于测试RPA功能",
+  "headless": false,
+  "auto_close": false,
+  "save_session": false,
+  "parameters": {
+    "keyword": {
+      "type": "string",
+      "description": "搜索关键词",
+      "required": true,
+      "default": "Playwright"
+    }
+  },
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "https://www.baidu.com",
+      "description": "打开百度首页"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "等待页面加载"
+    },
+    {
+      "action": "input",
+      "selector": "#kw",
+      "text": "{{keyword}}",
+      "fallback_selectors": [
+        "input[name='wd']",
+        "input[type='text'][id='kw']"
+      ],
+      "description": "输入搜索关键词"
+    },
+    {
+      "action": "click",
+      "selector": "#su",
+      "fallback_selectors": [
+        "input[type='submit']",
+        "input[value='百度一下']"
+      ],
+      "description": "点击搜索按钮"
+    },
+    {
+      "action": "wait_for_navigation",
+      "timeout": 10000,
+      "description": "等待搜索结果页面加载"
+    },
+    {
+      "action": "verify",
+      "selector": "#content_left",
+      "description": "验证搜索结果出现"
+    },
+    {
+      "action": "screenshot",
+      "path": "baidu_search_result.png",
+      "description": "截图搜索结果"
+    }
+  ],
+  "created_at": "2024-01-10T17:00:00",
+  "updated_at": "2024-01-10T17:00:00",
+  "author": "system",
+  "version": "1.0"
+}
